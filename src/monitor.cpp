@@ -154,11 +154,11 @@ String getBlockHeight(void){
 unsigned long mBTCUpdate = 0;
 
 String getBTCprice(void){
-
+    
     if((mBTCUpdate == 0) || (millis() - mBTCUpdate > UPDATE_BTC_min * 60 * 1000)){
-
+    
         if (WiFi.status() != WL_CONNECTED) return (String(bitcoin_price) + "$");
-
+        
         HTTPClient http;
         try {
         http.begin(getBTCAPI);
@@ -169,19 +169,21 @@ String getBTCprice(void){
 
             DynamicJsonDocument doc(1024);
             deserializeJson(doc, payload);
-            if (doc.containsKey("last_trade_price")) bitcoin_price = doc["last_trade_price"];
+            if (doc.containsKey("bpi") && doc["bpi"].containsKey("USD")) {
+                bitcoin_price = doc["bpi"]["USD"]["rate_float"].as<unsigned int>();
+            }
 
             doc.clear();
 
             mBTCUpdate = millis();
         }
-
+        
         http.end();
         } catch(...) {
           http.end();
         }
-    }
-
+    }  
+  
   return (String(bitcoin_price) + "$");
 }
 
