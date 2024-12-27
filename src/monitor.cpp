@@ -319,80 +319,119 @@ coin_data getCoinData(unsigned long mElapsed)
   return data;
 }
 
-pool_data getPoolData(void){
-    //pool_data pData;    
-    if((mPoolUpdate == 0) || (millis() - mPoolUpdate > UPDATE_POOL_min * 60 * 1000)){      
-        if (WiFi.status() != WL_CONNECTED) return pData;            
-        //Make first API call to get global hash and current difficulty
-        HTTPClient http;
-        http.setReuse(true);        
-        try {          
-          String btcWallet = Settings.BtcWallet;
-          // Serial.println(btcWallet);
-          if (btcWallet.indexOf(".")>0) btcWallet = btcWallet.substring(0,btcWallet.indexOf("."));
-          if (Settings.PoolAddress == "tn.vkbit.com") {
-            http.begin("https://testnet.vkbit.com/miner/"+btcWallet);
-            // Serial.println("https://testnet.vkbit.com/miner/"+btcWallet);
-          } else {
-            http.begin(String(getPublicPool)+btcWallet);
-          }
-          int httpCode = http.GET();
-          if (httpCode == HTTP_CODE_OK) {
-              String payload = http.getString();
-              // Serial.println(payload);
-              StaticJsonDocument<300> filter;
-              filter["bestDifficulty"] = true;
-              filter["workersCount"] = true;
-              filter["workers"][0]["sessionId"] = true;
-              filter["workers"][0]["hashRate"] = true;
-              DynamicJsonDocument doc(2048);
-              deserializeJson(doc, payload, DeserializationOption::Filter(filter));
-              //Serial.println(serializeJsonPretty(doc, Serial));
-              if (doc.containsKey("workersCount")) pData.workersCount = doc["workersCount"].as<int>();
-              const JsonArray& workers = doc["workers"].as<JsonArray>();
-              float totalhashs = 0;
-              for (const JsonObject& worker : workers) {
-                totalhashs += worker["hashRate"].as<double>();
-                /* Serial.print(worker["sessionId"].as<String>()+": ");
-                Serial.print(" - "+worker["hashRate"].as<String>()+": ");
-                Serial.println(totalhashs); */
-              }
-              char totalhashs_s[16] = {0};
-              suffix_string(totalhashs, totalhashs_s, 16, 0);
-              pData.workersHash = String(totalhashs_s);
+pool_data getPoolData(void) {
+    static pool_data pData;  // Make static to preserve last valid data
+    static unsigned long lastSuccessfulUpdate = 0;  // Track successful updates
+    
+    // Check if it's time to update
+    if ((mPoolUpdate == 0) || (millis() - mPoolUpdate > UPDATE_POOL_min * 60 * 1000)) {
+        if (WiFi.status() != WL_CONNECTED) {
+            Serial.println("No WiFi connection");
+            return pData;  // Return last known good data
+        }
 
-              double temp;
-              if (doc.containsKey("bestDifficulty")) {
-              temp = doc["bestDifficulty"].as<double>();            
-              char best_diff_string[16] = {0};
-              suffix_string(temp, best_diff_string, 16, 0);
-              pData.bestDifficulty = String(best_diff_string);
-              }
-              doc.clear();
-              mPoolUpdate = millis();
-              Serial.println("\n####### Pool Data OK!");               
-          } else {
-              Serial.println("\n####### Pool Data HTTP Error!");    
-              /* Serial.println(httpCode);
-              String payload = http.getString();
-              Serial.println(payload); */
-              // mPoolUpdate = millis();
-              pData.bestDifficulty = "P";
-              pData.workersHash = "E";
-              pData.workersCount = 0;
-              http.end();
-              return pData; 
-          }
-          http.end();
-        } catch(...) {
-          Serial.println("####### Pool Error!");          
-          // mPoolUpdate = millis();
-          pData.bestDifficulty = "P";
-          pData.workersHash = "Error";
-          pData.workersCount = 0;
-          http.end();
-          return pData;
-        } 
+        HTTPClient http;
+        http.setReuse(true);
+        
+        // Set timeout to prevent hanging
+        http.setTimeout(10000);  // 10 second timeout
+        
+        String btcWallet = Settings.BtcWallet;
+        if (btcWallet.indexOf(".") > 0) {
+            btcWallet = btcWallet.substring(0, btcWallet.indexOf("."));
+        }
+        
+        String url;
+        if (Settings.PoolAddress == "tn.vkbit.com") {
+            url = "https://testnet.vkbit.com/miner/" + btcWallet;
+        } else {
+            url = String(getPublicPool) + btcWallet;
+        }
+        
+        bool success = false;
+        try {
+            http.begin(url);
+            int httpCode = http.GET();
+            
+            if (httpCode == HTTP_CODE_OK) {
+                String payload = http.getString();
+                
+                // Use a larger buffer for JSON parsing
+                StaticJsonDocument<384> filter;
+                filter["bestDifficulty"] = true;
+                filter["workersCount"] = true;
+                filter["workers"][0]["sessionId"] = true;
+                filter["workers"][0]["hashRate"] = true;
+                
+                DynamicJsonDocument doc(4096);  // Increased buffer size
+                DeserializationError error = deserializeJson(doc, payload, DeserializationOption::Filter(filter));
+                
+                if (!error) {
+                    // Create temporary variables
+                    pool_data tempData;
+                    
+                    // Parse workersCount
+                    tempData.workersCount = doc.containsKey("workersCount") ? doc["workersCount"].as<int>() : 0;
+                    
+                    // Calculate total hash rate
+                    float totalhashs = 0;
+                    const JsonArray& workers = doc["workers"].as<JsonArray>();
+                    for (const JsonObject& worker : workers) {
+                        if (worker.containsKey("hashRate")) {
+                            totalhashs += worker["hashRate"].as<double>();
+                        }
+                    }
+                    
+                    // Format hash rate
+                    char totalhashs_s[16] = {0};
+                    suffix_string(totalhashs, totalhashs_s, 16, 0);
+                    tempData.workersHash = String(totalhashs_s);
+                    
+                    // Parse difficulty
+                    if (doc.containsKey("bestDifficulty")) {
+                        double temp = doc["bestDifficulty"].as<double>();
+                        char best_diff_string[16] = {0};
+                        suffix_string(temp, best_diff_string, 16, 0);
+                        tempData.bestDifficulty = String(best_diff_string);
+                    }
+                    
+                    // Only update main data if all parsing was successful
+                    pData = tempData;
+                    lastSuccessfulUpdate = millis();
+                    success = true;
+                    
+                    Serial.println("####### Pool Data OK!");
+                } else {
+                    Serial.print("JSON Parse Error: ");
+                    Serial.println(error.c_str());
+                }
+            } else {
+                Serial.print("HTTP Error: ");
+                Serial.println(httpCode);
+            }
+        } catch (const std::exception& e) {
+            Serial.print("Exception: ");
+            Serial.println(e.what());
+        } catch (...) {
+            Serial.println("Unknown error occurred");
+        }
+        
+        http.end();
+        
+        // Update timestamp only on successful updates
+        if (success) {
+            mPoolUpdate = millis();
+        } else {
+            // If update failed and last successful update was too long ago, show error
+            if (millis() - lastSuccessfulUpdate > 5 * 60 * 1000) {  // 5 minutes
+                pData.bestDifficulty = "P";
+                pData.workersHash = "Error";
+                pData.workersCount = 0;
+            }
+            // Retry sooner on failure
+            mPoolUpdate = millis() - ((UPDATE_POOL_min * 60 * 1000) / 2);
+        }
     }
+    
     return pData;
 }
