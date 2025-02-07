@@ -12,8 +12,8 @@
 //Time update period
 #define UPDATE_PERIOD_h   5
 
-//API BTC price (Update to USDT cus it's more liquidity and flow price updade)   
-#define getBTCAPI "https://api.coindesk.com/v1/bpi/currentprice.json"
+//API BTC price (Update to USDT cus it's more liquidity and flow price updade)
+#define getBTCAPI "https://api.coinpaprika.com/v1/tickers/btc-bitcoin"
 #define UPDATE_BTC_min   1
 
 //API Block height
