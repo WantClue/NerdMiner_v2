@@ -153,37 +153,45 @@ String getBlockHeight(void){
 
 unsigned long mBTCUpdate = 0;
 
-String getBTCprice(void){
-    
-    if((mBTCUpdate == 0) || (millis() - mBTCUpdate > UPDATE_BTC_min * 60 * 1000)){
-    
-        if (WiFi.status() != WL_CONNECTED) return (String(bitcoin_price) + "$");
-        
-        HTTPClient http;
-        try {
-        http.begin(getBTCAPI);
-        int httpCode = http.GET();
+String getBTCprice(void) {
+  // Check if the price needs to be updated
+  if ((mBTCUpdate == 0) || (millis() - mBTCUpdate > UPDATE_BTC_min * 60 * 1000)) {
+      // Ensure WiFi is connected
+      if (WiFi.status() != WL_CONNECTED) {
+          return (String(bitcoin_price) + "$");
+      }
 
-        if (httpCode == HTTP_CODE_OK) {
-            String payload = http.getString();
+      HTTPClient http;
+      try {
+          // Use the new API endpoint
+          http.begin(getBTCAPI);
+          int httpCode = http.GET();
 
-            DynamicJsonDocument doc(1024);
-            deserializeJson(doc, payload);
-            if (doc.containsKey("bpi") && doc["bpi"].containsKey("USD")) {
-                bitcoin_price = doc["bpi"]["USD"]["rate_float"].as<unsigned int>();
-            }
+          if (httpCode == HTTP_CODE_OK) {
+              String payload = http.getString();
 
-            doc.clear();
+              // Parse the JSON response
+              DynamicJsonDocument doc(2048); // Increase size if needed
+              deserializeJson(doc, payload);
 
-            mBTCUpdate = millis();
-        }
-        
-        http.end();
-        } catch(...) {
+              // Extract the Bitcoin price from the new API response
+              if (doc.containsKey("quotes") && doc["quotes"].containsKey("USD")) {
+                  bitcoin_price = doc["quotes"]["USD"]["price"].as<double>();
+              }
+
+              doc.clear();
+
+              // Update the last fetch time
+              mBTCUpdate = millis();
+          }
+
           http.end();
-        }
-    }  
-  
+      } catch (...) {
+          http.end();
+      }
+  }
+
+  // Return the price as a string with a "$" suffix
   return (String(bitcoin_price) + "$");
 }
 
