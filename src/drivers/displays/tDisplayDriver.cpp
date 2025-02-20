@@ -86,8 +86,8 @@ void tDisplay_MinerScreen(unsigned long mElapsed)
 
   render.rdrawString(data.currentHashRate.c_str(), 118, 114, TFT_BLACK);
   // Total hashes
-  render.setFontSize(18);
-  render.rdrawString(data.totalMHashes.c_str(), 268, 138, TFT_BLACK);
+  // render.setFontSize(18);
+  // render.rdrawString(data.totalMHashes.c_str(), 268, 138, TFT_BLACK);
   // ASIC temp
   render.setFontSize(18);
   render.drawString(data.currentTemperature.c_str(), 186, 20, 0xDEDB);
