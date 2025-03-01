@@ -3,7 +3,7 @@ name: Nerdminer Release
 on:
   push:
     branches:
-      - master
+      - nerdnos
 
 jobs:
   build:
