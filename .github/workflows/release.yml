@@ -54,7 +54,7 @@ jobs:
         timeout-minutes: 120
         with:
           secret: ${{ github.TOKEN }}
-          approvers: BitMaker-hub
+          approvers: WantClue
           minimum-approvals: 1
           issue-title: "Releasing Nerdminer version ${{ needs.build.outputs.version }}"
           issue-body: "Please approve or deny the release of ${{ needs.build.outputs.version }}."
