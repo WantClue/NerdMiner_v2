@@ -13,6 +13,7 @@
 #include "timeconst.h"
 #include "drivers/displays/display.h"
 #include "drivers/storage/storage.h"
+#include "drivers/storage/nvMemory.h"
 
 #include "drivers/nerd-nos/nerdnos.h"
 #include "mining_nerdnos.h"
@@ -24,6 +25,7 @@ extern mining_subscribe mWorker;
 extern mining_job mJob;
 extern miner_data mMiner;
 extern monitor_data mMonitor;
+extern TSettings Settings;
 
 extern pthread_mutex_t job_mutex;
 extern double best_diff;
@@ -178,6 +180,18 @@ void runASIC_RX(void * task_id) {
     // update best diff
     if (diff_hash > best_diff) {
       best_diff = diff_hash;
+      
+      // Update the persistent storage if the new diff is better than the stored one
+      if (diff_hash > Settings.bestDiff) {
+        Settings.bestDiff = diff_hash;
+        // Create an instance of nvMemory to save the settings
+        nvMemory memory;
+        if (memory.saveConfig(&Settings)) {
+          Serial.printf("New best diff %.3f saved to persistent storage\n", diff_hash);
+        } else {
+          Serial.println("Failed to save best diff to persistent storage");
+        }
+      }
     }
 
     // calculate the hashrate
@@ -214,6 +228,12 @@ void runASIC_RX(void * task_id) {
 
 void runASIC(void * task_id) {
   Serial.printf("[MINER] Started runASIC Task!\n");
+
+  // Initialize best_diff from persistent storage if available
+  if (Settings.bestDiff > 0) {
+    best_diff = Settings.bestDiff;
+    Serial.printf("Loaded best diff from persistent storage: %.3f\n", best_diff);
+  }
 
   for (int i=0;i<ASIC_JOB_COUNT;i++) {
     asic_job_mutexes[i] = PTHREAD_MUTEX_INITIALIZER;

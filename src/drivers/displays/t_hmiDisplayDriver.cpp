@@ -11,6 +11,7 @@
 #include "media/Free_Fonts.h"
 #include "version.h"
 #include "monitor.h"
+#include "utils.h"  // For suffix_string function
 #include "OpenFontRender.h"
 #ifdef TOUCH_ENABLE
 #include "TouchHandler.h"
@@ -124,7 +125,16 @@ void printPoolData()
 
   render.setFontSize(18);
   render.drawString(pData.workersHash.c_str(), 216, 170+34, TFT_BLACK);
-  render.drawString(pData.bestDifficulty.c_str(), 5, 170+34, TFT_BLACK);
+  
+  // Display the best difficulty from persistent storage if available
+  extern TSettings Settings;
+  if (Settings.bestDiff > 0) {
+    char best_diff_string[16] = {0};
+    suffix_string(Settings.bestDiff, best_diff_string, 16, 0);
+    render.drawString(best_diff_string, 5, 170+34, TFT_BLACK);
+  } else {
+    render.drawString(pData.bestDifficulty.c_str(), 5, 170+34, TFT_BLACK);
+  }
   // printBatteryVoltage();
 }
 
@@ -175,8 +185,17 @@ void t_hmiDisplay_MinerScreen(unsigned long mElapsed)
   // Block templates
   render.setFontSize(18);
   render.drawString(data.templates.c_str(), 186, 20, 0xDEDB);
-  // Best diff
-  render.drawString(data.bestDiff.c_str(), 186, 48, 0xDEDB);
+  
+  // Best diff - use the persistent storage value if available
+  extern TSettings Settings;
+  if (Settings.bestDiff > 0) {
+    char best_diff_string[16] = {0};
+    suffix_string(Settings.bestDiff, best_diff_string, 16, 4);
+    render.drawString(best_diff_string, 186, 48, 0xDEDB);
+  } else {
+    render.drawString(data.bestDiff.c_str(), 186, 48, 0xDEDB);
+  }
+  
   // 32Bit shares
   render.setFontSize(18);
   render.drawString(data.completedShares.c_str(), 186, 76, 0xDEDB);

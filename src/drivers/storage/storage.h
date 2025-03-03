@@ -43,6 +43,9 @@
 #define JSON_SPIFFS_KEY_STATS2NV	"saveStatsToNVS"
 #define JSON_SPIFFS_KEY_INVCOLOR	"invertColors"
 
+// JSON key for best diff
+#define JSON_SPIFFS_KEY_BEST_DIFF "bestDiff"
+
 // settings
 struct TSettings
 {
@@ -55,6 +58,7 @@ struct TSettings
 	int Timezone{ DEFAULT_TIMEZONE };
 	bool saveStats{ DEFAULT_SAVESTATS };
 	bool invertColors{ DEFAULT_INVERTCOLORS };
+	double bestDiff{ 0.0 };  // Store the best difficulty achieved
 };
 
 #endif // _STORAGE_H_
