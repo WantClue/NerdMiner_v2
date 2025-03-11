@@ -353,7 +353,7 @@ pool_data getPoolData(void) {
         if (Settings.PoolAddress == "tn.vkbit.com") {
             url = "https://testnet.vkbit.com/miner/" + btcWallet;
         } else {
-            url = String(getPublicPool) + btcWallet;
+            url = String(getNerdminerPool) + btcWallet;
         }
         
         bool success = false;

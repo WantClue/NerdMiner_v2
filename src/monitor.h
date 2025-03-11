@@ -29,6 +29,7 @@
 //API public-pool.io
 // https://public-pool.io:40557/api/client/btcString
 #define getPublicPool "https://public-pool.io:40557/api/client/" // +btcString
+#define getNerdminerPool "https://pool.nerdminer.de/api/client/" // +btcString
 #define UPDATE_POOL_min   1
 
 #define NEXT_HALVING_EVENT 1050000 //840000
