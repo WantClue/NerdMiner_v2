@@ -71,8 +71,8 @@ void tDisplay_MinerScreen(unsigned long mElapsed)
   // Print background screen
   background.pushImage(0, 0, MinerWidth, MinerHeight, MinerScreen);
 #ifdef NERD_NOS
-  Serial.printf(">>> Completed %s share(s), %s Khashes, avg. hashrate %s GH/s, vCore: %smV, temp: %s°C\n",
-                data.completedShares.c_str(), data.totalKHashes.c_str(), data.currentHashRate.c_str(),
+  Serial.printf(">>> Completed %s share(s), avg. hashrate %s GH/s, vCore: %smV, temp: %s°C\n",
+                data.completedShares.c_str(), data.currentHashRate.c_str(),
                 data.vcore.c_str(), data.currentTemperature.c_str());
 #else
   Serial.printf(">>> Completed %s share(s), %s Khashes, avg. hashrate %s KH/s\n",
