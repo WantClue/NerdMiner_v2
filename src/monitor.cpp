@@ -48,9 +48,38 @@ void setup_monitor(void){
 
     // Adjust offset depending on your zone
     // GMT +2 in seconds (zona horaria de Europa Central)
-    timeClient.setTimeOffset(3600 * Settings.Timezone);
+    // Check if we're in DST (Daylight Saving Time) for Europe
+    // European DST runs from last Sunday in March to last Sunday in October
+    time_t now = time(nullptr);
+    struct tm *timeinfo = localtime(&now);
+    bool isDST = false;
+    
+    // Simple DST check for European time zones
+    if (timeinfo->tm_mon > 2 && timeinfo->tm_mon < 10) {
+        // April to September is definitely DST
+        isDST = true;
+    } else if (timeinfo->tm_mon == 2) {
+        // March - DST starts on the last Sunday
+        int lastSunday = 31 - (timeinfo->tm_wday + 31 - 7) % 7;
+        if (timeinfo->tm_mday >= lastSunday && timeinfo->tm_wday == 0 && timeinfo->tm_hour >= 2) {
+            isDST = true;
+        } else if (timeinfo->tm_mday > lastSunday) {
+            isDST = true;
+        }
+    } else if (timeinfo->tm_mon == 10) {
+        // October - DST ends on the last Sunday
+        int lastSunday = 31 - (timeinfo->tm_wday + 31 - 7) % 7;
+        if (timeinfo->tm_mday < lastSunday || (timeinfo->tm_mday == lastSunday && timeinfo->tm_hour < 3)) {
+            isDST = true;
+        }
+    }
+    
+    // Apply timezone offset plus 1 hour if in DST
+    timeClient.setTimeOffset(3600 * Settings.Timezone + (isDST ? 3600 : 0));
 
     Serial.println("TimeClient setup done");
+    Serial.print("DST active: ");
+    Serial.println(isDST ? "Yes" : "No");
 #ifdef NERDMINER_T_HMI
     poolAPIUrl = getPoolAPIUrl();
     Serial.println("poolAPIUrl: " + poolAPIUrl);
