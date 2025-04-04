@@ -1,6 +1,6 @@
 #pragma once
 
-#define NERDNOS_JOB_INTERVAL_MS 30
+#define NERDNOS_JOB_INTERVAL_MS 1500
 
 void runASIC(void * task_id);
 void runASIC_RX(void * task_id);
