@@ -170,6 +170,9 @@ void runASIC_RX(void * task_id) {
 
     uint8_t hash[32];
 
+    // now we have the original job and can `or` the version
+    result.rolled_version |= version;
+
     // check the nonce difficulty
     double diff_hash = nerdnos_test_nonce_value(
         &asic_jobs[result.job_id],
@@ -180,7 +183,7 @@ void runASIC_RX(void * task_id) {
     // update best diff
     if (diff_hash > best_diff) {
       best_diff = diff_hash;
-      
+
       // Update the persistent storage if the new diff is better than the stored one
       if (diff_hash > Settings.bestDiff) {
         Settings.bestDiff = diff_hash;
