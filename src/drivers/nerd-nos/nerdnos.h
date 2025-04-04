@@ -9,6 +9,7 @@ typedef struct
     uint8_t job_id;
     uint32_t nonce;
     uint32_t rolled_version;
+    int asic_nr;
     uint32_t data;
     uint8_t reg;
     uint8_t is_reg_resp;
@@ -82,7 +83,7 @@ void nerdnos_create_job(mining_subscribe *mWorker, mining_job *job, bm_job_t *ne
 void nerdnos_send_work(bm_job_t *next_bm_job, uint8_t job_id);
 
 // receive and process responses
-bool nerdnos_proccess_work(uint32_t version, uint16_t timeout, task_result *result);
+bool nerdnos_proccess_work(uint16_t timeout, task_result *result);
 
 // test difficulty
 double nerdnos_test_nonce_value(const bm_job_t *job, const uint32_t nonce, const uint32_t rolled_version, uint8_t hash_result[32]);

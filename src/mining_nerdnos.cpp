@@ -18,7 +18,7 @@
 #include "drivers/nerd-nos/nerdnos.h"
 #include "mining_nerdnos.h"
 #include "drivers/nerd-nos/adc.h"
-#include "drivers/nerd-nos/bm1397.h"
+#include "drivers/nerd-nos/bm1366.h"
 
 extern WiFiClient client;
 extern mining_subscribe mWorker;
@@ -69,7 +69,7 @@ static volatile uint32_t version = 0x20000000;
 
 history_t history = {0};
 
-static uint32_t last_request_hashrate_ts = 0;
+extern BM1366 *bm1366;
 
 double nerdnos_get_avg_hashrate() {
   return history.avg_gh;
@@ -141,7 +141,7 @@ static void process_hashrate_response(task_result *result) {
 void runASIC_RX(void * task_id) {
   while (1) {
     task_result result = {0};
-    if (!nerdnos_proccess_work(version, 10000, &result)) {
+    if (!nerdnos_proccess_work(10000, &result)) {
       continue;
     }
 
@@ -300,7 +300,7 @@ void runASIC(void * task_id) {
 
           gpio_set_level(NERD_NOS_GPIO_PEN, 1);  // Enable Buck again
           Serial.println("Temperature safe. Re-enabling ASIC.");
-          BM1397_init(210, 1); // Re-Init ASIC
+          bm1366->init(200, 1, 1); // Re-Init ASIC
         }
 
         lastTempCheck = currentTime;
@@ -311,14 +311,6 @@ void runASIC(void * task_id) {
 
       // use extranonce2 as job id
       uint8_t asic_job_id = (uint8_t) (extranonce_2 % ASIC_JOB_COUNT);
-
-#ifdef REQUEST_ASIC_HASHRATE
-      if (millis() - last_request_hashrate_ts > 2500) {
-        BM1397_read_hashrate();
-        last_request_hashrate_ts = millis();
-      }
-#endif
-
 
       pthread_mutex_lock(&asic_job_mutexes[asic_job_id]);
       // free memory if this slot was used before

@@ -14,7 +14,7 @@
 #include "drivers/displays/display.h"
 #include "drivers/storage/SDCard.h"
 #include "timeconst.h"
-#include "drivers/nerd-nos/bm1397.h"
+#include "drivers/nerd-nos/bm1366.h"
 #include "drivers/nerd-nos/serial.h"
 #include "drivers/nerd-nos/adc.h"
 

@@ -1,6 +1,7 @@
-
 #ifndef MINING_API_H
 #define MINING_API_H
+
+#include <Arduino.h>
 
 // Mining
 #define MAX_NONCE_STEP  5000000U
