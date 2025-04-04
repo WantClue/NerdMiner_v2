@@ -146,12 +146,6 @@ void runASIC_RX(void * task_id) {
     }
 
     if (result.is_reg_resp) {
-      switch (result.reg) {
-        case 0x04: {
-          process_hashrate_response(&result);
-          break;
-        }
-      }
       continue;
     }
     // check if the ID is in the valid range and the slot is not empty
