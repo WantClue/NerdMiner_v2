@@ -297,6 +297,7 @@ void runASIC(void * task_id) {
 
           gpio_set_level(NERD_NOS_GPIO_PEN, 1);  // Enable Buck again
           Serial.println("Temperature safe. Re-enabling ASIC.");
+          nerdnos_reset();
           bm1366->init(200, 1, 1); // Re-Init ASIC
         }
 

@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "../devices/nerdnos.h"
 #include "../../mining.h"
 #include "adc.h"
 #include "bm1366.h"
@@ -183,8 +184,31 @@ void nerdnos_set_asic_difficulty(uint32_t difficulty) {
   bm1366->setJobDifficultyMask(difficulty);
 }
 
+void nerdnos_reset() {
+  // reset
+  gpio_set_level(NERD_NOS_GPIO_RST, 1);
+
+  // delay for 100ms
+  vTaskDelay(100 / portTICK_PERIOD_MS);
+
+  // set the gpio pin high
+  gpio_set_level(NERD_NOS_GPIO_RST, 0);
+
+  // delay for 100ms
+  vTaskDelay(100 / portTICK_PERIOD_MS);
+}
+
 void nerdnos_init() {
   bm1366 = new BM1366();
+
+  gpio_set_direction(NERD_NOS_GPIO_PEN, GPIO_MODE_OUTPUT);
+  gpio_set_level(NERD_NOS_GPIO_PEN, 1);
+
+  gpio_pad_select_gpio(NERD_NOS_GPIO_RST);
+  gpio_set_direction(NERD_NOS_GPIO_RST, GPIO_MODE_OUTPUT);
+
+  nerdnos_reset();
+
   nerdnos_adc_init();
   SERIAL_init();
   int chips = bm1366->init(200, 1, 128);

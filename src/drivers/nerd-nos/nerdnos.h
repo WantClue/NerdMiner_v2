@@ -92,3 +92,4 @@ double nerdnos_test_nonce_value(const bm_job_t *job, const uint32_t nonce, const
 void nerdnos_free_bm_job(bm_job_t *job);
 
 void nerdnos_init();
+void nerdnos_reset();
