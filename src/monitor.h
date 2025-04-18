@@ -123,6 +123,10 @@ typedef struct{
 
 void setup_monitor(void);
 
+// Timezone and NTP functions
+bool checkDST();
+void forceNTPUpdate();
+
 mining_data getMiningData(unsigned long mElapsed);
 clock_data getClockData(unsigned long mElapsed);
 coin_data getCoinData(unsigned long mElapsed);

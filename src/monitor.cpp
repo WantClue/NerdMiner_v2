@@ -33,53 +33,83 @@ extern TSettings Settings;
 bool invertColors = false;
 
 WiFiUDP ntpUDP;
-NTPClient timeClient(ntpUDP, "europe.pool.ntp.org", 3600, 60000);
+NTPClient timeClient(ntpUDP, "europe.pool.ntp.org", 0, 60000); // Initialize with 0 offset, we'll set it correctly in setup_monitor
 unsigned int bitcoin_price=0;
 String current_block = "793261";
 global_data gData;
 pool_data pData;
 String poolAPIUrl;
 
+unsigned long mTriggerUpdate = 0;
+unsigned long initialMillis = millis();
+unsigned long initialTime = 0;
+unsigned long mPoolUpdate = 0;
 
-void setup_monitor(void){
-    /******** TIME ZONE SETTING *****/
-
-    timeClient.begin();
-
-    // Adjust offset depending on your zone
-    // GMT +2 in seconds (zona horaria de Europa Central)
-    // Check if we're in DST (Daylight Saving Time) for Europe
-    // European DST runs from last Sunday in March to last Sunday in October
+// Helper function to check if we're in DST (Daylight Saving Time) for Europe
+bool checkDST() {
     time_t now = time(nullptr);
     struct tm *timeinfo = localtime(&now);
-    bool isDST = false;
     
     // Simple DST check for European time zones
     if (timeinfo->tm_mon > 2 && timeinfo->tm_mon < 10) {
         // April to September is definitely DST
-        isDST = true;
+        return true;
     } else if (timeinfo->tm_mon == 2) {
         // March - DST starts on the last Sunday
         int lastSunday = 31 - (timeinfo->tm_wday + 31 - 7) % 7;
         if (timeinfo->tm_mday >= lastSunday && timeinfo->tm_wday == 0 && timeinfo->tm_hour >= 2) {
-            isDST = true;
+            return true;
         } else if (timeinfo->tm_mday > lastSunday) {
-            isDST = true;
+            return true;
         }
     } else if (timeinfo->tm_mon == 10) {
         // October - DST ends on the last Sunday
         int lastSunday = 31 - (timeinfo->tm_wday + 31 - 7) % 7;
         if (timeinfo->tm_mday < lastSunday || (timeinfo->tm_mday == lastSunday && timeinfo->tm_hour < 3)) {
-            isDST = true;
+            return true;
         }
     }
+    return false;
+}
+
+
+// Function to force an immediate NTP update with the current timezone settings
+void forceNTPUpdate() {
+    if(WiFi.status() == WL_CONNECTED) {
+        // Force update the time with current timezone settings
+        bool dstActive = checkDST();
+        int offset = 3600 * Settings.Timezone + (dstActive ? 3600 : 0);
+        timeClient.setTimeOffset(offset);
+        
+        if(timeClient.update()) {
+            initialTime = timeClient.getEpochTime();
+            mTriggerUpdate = millis();
+            Serial.println("Forced NTP update with timezone: " + String(Settings.Timezone) + 
+                          ", DST: " + String(dstActive ? "Yes" : "No") + 
+                          ", Offset: " + String(offset) + " seconds");
+        } else {
+            Serial.println("Failed to force NTP update");
+        }
+    } else {
+        Serial.println("Cannot force NTP update - WiFi not connected");
+    }
+}
+
+void setup_monitor(void){
+    /******** TIME ZONE SETTING *****/
+
+    timeClient.begin();
     
     // Apply timezone offset plus 1 hour if in DST
-    timeClient.setTimeOffset(3600 * Settings.Timezone + (isDST ? 3600 : 0));
+    bool dstActive = checkDST();
+    timeClient.setTimeOffset(3600 * Settings.Timezone + (dstActive ? 3600 : 0));
 
     Serial.println("TimeClient setup done");
     Serial.print("DST active: ");
-    Serial.println(isDST ? "Yes" : "No");
+    Serial.println(dstActive ? "Yes" : "No");
+    Serial.print("Timezone offset: ");
+    Serial.print(3600 * Settings.Timezone + (dstActive ? 3600 : 0));
+    Serial.println(" seconds");
 #ifdef NERDMINER_T_HMI
     poolAPIUrl = getPoolAPIUrl();
     Serial.println("poolAPIUrl: " + poolAPIUrl);
@@ -224,19 +254,21 @@ String getBTCprice(void) {
   return (String(bitcoin_price) + "$");
 }
 
-unsigned long mTriggerUpdate = 0;
-unsigned long initialMillis = millis();
-unsigned long initialTime = 0;
-unsigned long mPoolUpdate = 0;
-
 void getTime(unsigned long* currentHours, unsigned long* currentMinutes, unsigned long* currentSeconds){
 
   //Check if need an NTP call to check current time
   if((mTriggerUpdate == 0) || (millis() - mTriggerUpdate > UPDATE_PERIOD_h * 60 * 60 * 1000)){ //60 sec. * 60 min * 1000ms
     if(WiFi.status() == WL_CONNECTED) {
-        if(timeClient.update()) mTriggerUpdate = millis(); //NTP call to get current time
-        initialTime = timeClient.getEpochTime(); // Guarda la hora inicial (en segundos desde 1970)
-        Serial.print("TimeClient NTPupdateTime ");
+        // Force update the time with current timezone settings
+        timeClient.setTimeOffset(3600 * Settings.Timezone + (checkDST() ? 3600 : 0));
+        if(timeClient.update()) {
+            mTriggerUpdate = millis(); //NTP call to get current time
+            initialTime = timeClient.getEpochTime(); // Guarda la hora inicial (en segundos desde 1970)
+            Serial.print("TimeClient NTPupdateTime ");
+            Serial.print(" with timezone offset: ");
+            Serial.print(3600 * Settings.Timezone + (checkDST() ? 3600 : 0));
+            Serial.println(" seconds");
+        }
     }
   }
 

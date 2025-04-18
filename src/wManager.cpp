@@ -16,6 +16,10 @@
 #include "mining.h"
 #include "timeconst.h"
 
+// Forward declarations for functions in monitor.cpp
+extern void forceNTPUpdate();
+extern bool checkDST();
+
 
 // Flag for saving data
 bool shouldSaveConfig = false;
@@ -205,13 +209,24 @@ void init_WifiManager()
             Settings.PoolPort = atoi(port_text_box_num.getValue());
             strncpy(Settings.PoolPassword, password_text_box.getValue(), sizeof(Settings.PoolPassword));
             strncpy(Settings.BtcWallet, addr_text_box.getValue(), sizeof(Settings.BtcWallet));
-            Settings.Timezone = atoi(time_text_box_num.getValue());
+            
+            // Check if timezone has changed
+            int newTimezone = atoi(time_text_box_num.getValue());
+            bool timezoneChanged = (Settings.Timezone != newTimezone);
+            Settings.Timezone = newTimezone;
+            
             //Serial.println(save_stats_to_nvs.getValue());
             Settings.saveStats = (strncmp(save_stats_to_nvs.getValue(), "T", 1) == 0);
             #ifdef ESP32_2432S028R
                 Settings.invertColors = (strncmp(invertColors.getValue(), "T", 1) == 0);
             #endif
             nvMem.saveConfig(&Settings);
+            
+            // If timezone changed, force an NTP update
+            if (timezoneChanged) {
+                Serial.println("Timezone changed to: " + String(Settings.Timezone) + ", forcing NTP update");
+                forceNTPUpdate();
+            }
             delay(3*SECOND_MS);
             //reset and try again, or maybe put it to deep sleep
             ESP.restart();            
@@ -235,13 +250,24 @@ void init_WifiManager()
                 Settings.PoolPort = atoi(port_text_box_num.getValue());
                 strncpy(Settings.PoolPassword, password_text_box.getValue(), sizeof(Settings.PoolPassword));
                 strncpy(Settings.BtcWallet, addr_text_box.getValue(), sizeof(Settings.BtcWallet));
-                Settings.Timezone = atoi(time_text_box_num.getValue());
+                
+                // Check if timezone has changed
+                int newTimezone = atoi(time_text_box_num.getValue());
+                bool timezoneChanged = (Settings.Timezone != newTimezone);
+                Settings.Timezone = newTimezone;
+                
                 // Serial.println(save_stats_to_nvs.getValue());
                 Settings.saveStats = (strncmp(save_stats_to_nvs.getValue(), "T", 1) == 0);
                 #ifdef ESP32_2432S028R
                 Settings.invertColors = (strncmp(invertColors.getValue(), "T", 1) == 0);
                 #endif
                 nvMem.saveConfig(&Settings);
+                
+                // If timezone changed, force an NTP update
+                if (timezoneChanged) {
+                    Serial.println("Timezone changed to: " + String(Settings.Timezone) + ", forcing NTP update");
+                    forceNTPUpdate();
+                }
                 vTaskDelay(2000 / portTICK_PERIOD_MS);      
             }        
             ESP.restart();                            
@@ -295,7 +321,18 @@ void init_WifiManager()
     // Save the custom parameters to FS
     if (shouldSaveConfig)
     {
+        // Check if timezone has changed
+        int newTimezone = atoi(time_text_box_num.getValue());
+        bool timezoneChanged = (Settings.Timezone != newTimezone);
+        
         nvMem.saveConfig(&Settings);
+        
+        // If timezone changed, force an NTP update
+        if (timezoneChanged) {
+            Serial.println("Timezone changed to: " + String(Settings.Timezone) + ", forcing NTP update");
+            forceNTPUpdate();
+        }
+        
         #ifdef ESP32_2432S028R
          if (Settings.invertColors) ESP.restart();                
         #endif
